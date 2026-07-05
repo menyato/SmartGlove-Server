@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+
+# Runtime-generated data — logs, metrics, debug captures, device state.
+# None of this is source code; regenerated automatically as the server runs.
+*.jsonl
+*.log
+handlers/home_devices.json
+handlers/captured_scans/
+handlers/lidar_maps/
+handlers/lidar_reports/
+ocr_debug/

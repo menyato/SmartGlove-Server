@@ -1,0 +1,63 @@
+# ── Smart Glove Feature Server — Python 3.11 ─────────────────────────────────
+#
+# INSTALL ORDER (run each block separately — GPU wheels need special sources):
+#
+# STEP 1 — PyTorch with CUDA 12.1  (skip if already installed with CUDA)
+#   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+#
+# STEP 2 — Everything else
+#   pip install -r requirements_server.txt
+#
+# STEP 3 — OPTIONAL: PaddleOCR, only if you want to try --ocr-engine paddleocr
+#   (see the long note below before bothering — it currently does not work
+#   on this deployment's Windows machine, for reasons unrelated to torch)
+#   pip install --no-cache-dir paddlepaddle-gpu==3.3.1 -i https://www.paddlepaddle.org.cn/packages/stable/cu126/
+#   pip install paddleocr
+#
+# ─────────────────────────────────────────────────────────────────────────────
+
+# YOLO currency detection
+ultralytics>=8.3.0
+
+# Book Reader OCR — dual-engine, selected at runtime via `feature_server.py
+# --ocr-engine {easyocr,paddleocr}` (default: easyocr). See handlers/ocr.py's
+# module docstring and paddle_ocr_worker.py for the full design.
+#
+# easyocr (default, REQUIRED): torch-based, shares PyTorch's CUDA runtime with
+# Money/YOLO — no conflict, confirmed working on GPU on this deployment.
+easyocr>=1.7.0
+opencv-python>=4.10.0
+numpy>=1.24,<3.0
+
+# paddleocr (OPTIONAL — only needed if you pass --ocr-engine paddleocr):
+# runs in its own isolated subprocess (paddle_ocr_worker.py) so its CUDA
+# runtime never shares a process with PyTorch's. Even so, on this specific
+# deployment `import paddle` itself currently fails on Windows — OSError:
+# WinError 127 loading cusparse64_12.dll ("the specified procedure could not
+# be found") — CONFIRMED, by direct testing, to happen in BOTH GPU and CPU
+# device modes, with or without torch imported anywhere in the process, and
+# identically on paddlepaddle-gpu 3.0.0rc1 AND the current stable 3.3.1 (cu126
+# index, matched to the installed NVIDIA driver). Manually replicating
+# paddle's own documented Windows DLL-preload sequence (every bundled
+# nvidia-*-cu12 + paddle/libs DLL, via the same LoadLibraryExW calls and
+# add_dll_directory registrations paddle/__init__.py uses) succeeds
+# completely in isolation — yet the real `import paddle` still crashes,
+# meaning the bug is inside paddle's own compiled core module loading on this
+# machine, not fixable by more pip version changes. handlers/ocr.py already
+# handles this gracefully: it tries the PaddleOCR worker once per process,
+# and falls back to easyocr automatically (without retrying every request) if
+# the worker can't start — so --ocr-engine paddleocr is always SAFE to pass,
+# it just won't currently provide any benefit over easyocr on this machine.
+# If you want to actually attempt PaddleOCR:
+#   pip install --no-cache-dir paddlepaddle-gpu==3.3.1 -i https://www.paddlepaddle.org.cn/packages/stable/cu126/
+#   pip install paddleocr
+# If that combination is ever fixed upstream (or you try downgrading to the
+# pre-paddlex 2.x line, e.g. paddlepaddle-gpu==2.6.2 + an older paddleocr —
+# paddle_ocr_worker.py already has a fallback constructor call for that 2.x
+# API), --ocr-engine paddleocr will start working with NO further code changes.
+
+# Windows TTS / audio
+pywin32>=306 ; platform_system == "Windows"
+
+# Home automation — generates the ESP32 relay-board WiFi setup QR code
+qrcode[pil]>=7.4
