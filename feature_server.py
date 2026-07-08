@@ -42,7 +42,7 @@ for _stream in (sys.stdout, sys.stderr):
 
 import tts
 from protocol import recv_msg, send_msg
-from handlers import money, ocr, home
+from handlers import money, ocr, home, env
 from handlers.tts_handler import TTSHandler
 from handlers.lidar import LidarHandler
 from handlers.metrics_handler import MetricsHandler
@@ -153,6 +153,7 @@ FEATURE_HANDLERS = {
     "tts":     TTSHandler,
     "lidar":   LidarHandler,
     "home":    home.HomeHandler,
+    "env":     env.EnvHandler,
     "metrics": MetricsHandler,
 }
 
