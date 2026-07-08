@@ -61,3 +61,8 @@ pywin32>=306 ; platform_system == "Windows"
 
 # Home automation — generates the ESP32 relay-board WiFi setup QR code
 qrcode[pil]>=7.4
+
+# Environmental Awareness — the laptop runs the Gemini call on behalf of the
+# glove (the Pi's phone-hotspot DNS is unreliable). Needs GEMINI_API_KEY set
+# on the laptop (env var, ~/.env, ~/keys.env, or GEMINI_API_KEY_HARDCODED).
+google-genai>=0.3
