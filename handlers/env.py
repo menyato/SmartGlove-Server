@@ -181,36 +181,29 @@ class EnvHandler(FeatureHandler):
 
     # ── Gemini ────────────────────────────────────────────────────────────────
     def _ask(self, msg: dict) -> dict:
+        # BACKUP Gemini path only — no archiving here. The glove always sends a
+        # separate "scan" message that saves the frames + reply for reference,
+        # regardless of which side ran Gemini.
+        client = _get_client()
+        if client is None:
+            return {"ok": False, "reply": "",
+                    "error": "server has no Gemini client (missing package or key)",
+                    "tts": "", "quit": False}
         jpegs = []
         for b64 in msg.get("frames_b64", []) or []:
             try:
                 jpegs.append(base64.b64decode(b64))
             except (ValueError, TypeError):
                 pass
-
-        client = _get_client()
-        if client is None:
-            # Can't run Gemini here, but STILL archive the frames the glove
-            # sent so they land on the server for review — the Pi will run
-            # Gemini locally and follow up with the reply via a "scan" message.
-            self._save_scan(msg, reply="(server could not reach Gemini)",
-                            jpegs=jpegs)
-            return {"ok": False, "reply": "",
-                    "error": "server has no Gemini client (missing package or key)",
-                    "tts": "", "quit": False}
         system = msg.get("system", "") or ""
         user   = msg.get("user", "") or ""
         try:
             reply = _run_gemini(client, system, user, jpegs)
         except Exception as e:
-            print(f"[ENV] Gemini call failed: {e}")
-            self._save_scan(msg, reply=f"(Gemini error: {e})", jpegs=jpegs)
+            print(f"[ENV] Backup Gemini call failed: {e}")
             return {"ok": False, "reply": "", "error": str(e),
                     "tts": "", "quit": False}
-        # Archive for review (frames only when save_images, always log the reply).
-        self._save_scan(msg, reply=reply, jpegs=jpegs)
-        print(f"[ENV] ask -> {len(reply.split())} words for "
-              f"'{_safe(msg.get('session','session'))}'")
+        print(f"[ENV] backup ask -> {len(reply.split())} words")
         # No "tts": the glove speaks the reply itself with local espeak; setting
         # tts would make the laptop synthesize and speak it here instead.
         return {"ok": True, "reply": reply, "error": "", "tts": "", "quit": False}
