@@ -377,7 +377,24 @@ class HomeHandler(FeatureHandler):
             return self._list_devices(msg)
         if action == "get_relay_count":
             return self._get_relay_count(msg)
+        if action == "get_relays":
+            return self._get_relays(msg)
         return {"tts": "", "quit": False}
+
+    def _get_relays(self, msg: dict) -> dict:
+        """Return each paired board's IP + relay count so the OrangePi can talk
+        to the relays DIRECTLY over the LAN (no server in the control loop).
+        Silent — never spoken."""
+        with _devices_lock:
+            devices = [
+                {"device_id": did, "ip": d.get("ip"),
+                 "relay_count": d.get("relay_count", DEFAULT_RELAY_COUNT),
+                 "last_seen": d.get("last_seen", 0)}
+                for did, d in _devices.items()
+            ]
+        # most-recently-seen first, so the Pi's "default" is the freshest board
+        devices.sort(key=lambda x: x["last_seen"], reverse=True)
+        return {"tts": "", "quit": False, "devices": devices}
 
     def _resolve_device(self, msg: dict) -> tuple[str | None, dict | None]:
         device_id = msg.get("device_id") or _default_device_id()
